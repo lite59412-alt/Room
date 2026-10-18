@@ -25,9 +25,8 @@ jobs:
 
       - name: Build Web Assets & Setup Capacitor
         run: |
-          npm install
-          npm install @capacitor/core @capacitor/cli @capacitor/android
-          npm install @codetrix-studio/capacitor-google-auth
+          npm install --legacy-peer-deps
+          npm install @capacitor/core @capacitor/cli @capacitor/android @codetrix-studio/capacitor-google-auth --legacy-peer-deps
           npx cap init RoomieKhata com.roomiekhata.app --web-dir dist
           npm run build
           npx cap add android
@@ -54,4 +53,3 @@ jobs:
         with:
           name: RoomieKhata-App
           path: android/app/build/outputs/apk/debug/app-debug.apk
-          
