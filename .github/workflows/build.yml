@@ -27,6 +27,7 @@ jobs:
         run: |
           npm install
           npm install @capacitor/core @capacitor/cli @capacitor/android
+          npm install @codetrix-studio/capacitor-google-auth
           npx cap init RoomieKhata com.roomiekhata.app --web-dir dist
           npm run build
           npx cap add android
