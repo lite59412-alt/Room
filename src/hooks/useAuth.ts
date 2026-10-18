@@ -3,18 +3,33 @@ import {
   GoogleAuthProvider,
   getRedirectResult,
   onAuthStateChanged,
+  signInWithCredential,
   signInWithPopup,
   signInWithRedirect,
   signOut as fbSignOut,
   type User,
 } from 'firebase/auth';
 import { doc, onSnapshot, setDoc, updateDoc } from 'firebase/firestore';
+import { GoogleAuth } from '@codetrix-studio/capacitor-google-auth';
 import { getFirebase } from '../lib/firebase';
 import { authErrorMessage } from '../lib/roomService';
 import { unregisterPush } from '../lib/push';
 import type { Profile } from '../types';
 
 export type AuthPhase = 'loading' | 'out' | 'in';
+
+const GOOGLE_CLIENT_ID = '326426644235-04338f9ippkdls0nebc8el6dkutlb00c.apps.googleusercontent.com';
+
+// Native Google Auth initialize for Capacitor Android APK
+try {
+  GoogleAuth.initialize({
+    clientId: GOOGLE_CLIENT_ID,
+    scopes: ['profile', 'email'],
+    grantOfflineAccess: true,
+  });
+} catch (e) {
+  // Browser fallback me safe rahega
+}
 
 export function useAuth() {
   const fb = getFirebase()!;
@@ -70,12 +85,27 @@ export function useAuth() {
   const signIn = useCallback(async () => {
     setError('');
     setBusy(true);
+
+    // 1. Android APK native account picker try karega (No missing initial state error)
+    try {
+      const googleUser = await GoogleAuth.signIn();
+      const idToken = googleUser.authentication?.idToken;
+      if (idToken) {
+        const credential = GoogleAuthProvider.credential(idToken);
+        await signInWithCredential(fb.auth, credential);
+        return;
+      }
+    } catch (nativeErr: any) {
+      console.warn('Native Google Auth skipped, trying web auth:', nativeErr);
+    }
+
+    // 2. Web browser fallback agar native dialog na chale
     const provider = new GoogleAuthProvider();
     provider.setCustomParameters({ prompt: 'select_account' });
     try {
       await signInWithPopup(fb.auth, provider);
-    } catch (e) {
-      const code = (e as { code?: string }).code ?? '';
+    } catch (e: any) {
+      const code = e?.code ?? '';
       if (code === 'auth/popup-blocked' || code === 'auth/operation-not-supported-in-this-environment') {
         try {
           await signInWithRedirect(fb.auth, provider);
@@ -92,7 +122,12 @@ export function useAuth() {
   }, [fb]);
 
   const signOut = useCallback(async () => {
-    if (user) await unregisterPush(user.uid); // stop pushing this account's alerts to this device
+    if (user) await unregisterPush(user.uid);
+    try {
+      await GoogleAuth.signOut();
+    } catch (e) {
+      // ignore
+    }
     await fbSignOut(fb.auth);
   }, [fb, user]);
 
