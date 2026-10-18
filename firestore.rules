@@ -1,0 +1,159 @@
+rules_version = '2';
+
+// RoomieKhata — Firestore security rules
+// Publish in: Firebase Console → Firestore Database → Rules   (or: firebase deploy --only firestore:rules)
+// If you change VITE_ADMIN_EMAIL, change the email in isAdmin() as well.
+//
+// Guarantees enforced HERE (the client UI is only a convenience):
+//   • You can only add a kharcha in YOUR OWN name (paidById == addedBy == your uid)
+//   • Only the person who added a kharcha — or the Super Admin — can edit / delete it
+//   • Only the PAYER can raise a settlement request (always "pending_receiver_approval")
+//   • Only the RECEIVER can approve / reject it — nobody can settle their own debt
+//   • Super Admin can override anything — including creating / editing / deleting whole rooms,
+//     removing members, and clearing users' active-room link (users.currentRoomCode / users.notice)
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function isAdmin() {
+      return signedIn()
+        && request.auth.token.email_verified == true
+        && request.auth.token.email == 'lite59412@gmail.com';
+    }
+
+    function cfgPath() {
+      return /databases/$(database)/documents/config/app;
+    }
+
+    // true while the admin has switched Maintenance Mode on
+    function frozen() {
+      return exists(cfgPath()) && get(cfgPath()).data.get('maintenance', false) == true;
+    }
+
+    function roomPath(code) {
+      return /databases/$(database)/documents/rooms/$(code);
+    }
+
+    function memberOf(code) {
+      return signedIn() && request.auth.uid in get(roomPath(code)).data.memberIds;
+    }
+
+    // ---------- users/{uid}: each user owns their profile + push tokens ----------
+    match /users/{uid} {
+      allow read: if signedIn() && (request.auth.uid == uid || isAdmin());
+      allow create, update: if signedIn() && request.auth.uid == uid;
+      // admin may only re-point / clear a user's active room (room delete, kick, code change) and leave a notice
+      allow update: if isAdmin()
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['currentRoomCode', 'notice']);
+      allow delete: if false;
+    }
+
+    // ---------- global config: everyone reads, only admin writes ----------
+    match /config/{doc} {
+      allow read: if signedIn();
+      allow write: if isAdmin();
+    }
+
+    // ---------- rooms/{roomCode} ----------
+    match /rooms/{code} {
+      function isMember() {
+        return signedIn() && request.auth.uid in resource.data.memberIds;
+      }
+      function onlyKeys(keys) {
+        return request.resource.data.diff(resource.data).affectedKeys().hasOnly(keys);
+      }
+      function sameMembers() {
+        return request.resource.data.memberIds == resource.data.memberIds;
+      }
+      // joining = adding yourself (and only yourself) to memberIds
+      function isJoining() {
+        return signedIn()
+          && !(request.auth.uid in resource.data.memberIds)
+          && request.auth.uid in request.resource.data.memberIds
+          && request.resource.data.memberIds.hasAll(resource.data.memberIds)
+          && request.resource.data.memberIds.size() == resource.data.memberIds.size() + 1
+          && onlyKeys(['memberIds', 'members']);
+      }
+      // leaving = removing only yourself
+      function isLeaving() {
+        return isMember()
+          && !(request.auth.uid in request.resource.data.memberIds)
+          && request.resource.data.memberIds.size() == resource.data.memberIds.size() - 1
+          && onlyKeys(['memberIds', 'members']);
+      }
+
+      // knowing the room code is what lets you look a room up / join it
+      allow get: if signedIn();
+      allow list: if isAdmin();
+      // a normal user can only create a room containing exactly themselves; the admin can create any room
+      allow create: if isAdmin() || (signedIn()
+        && request.resource.data.createdBy == request.auth.uid
+        && request.resource.data.memberIds == [request.auth.uid]);
+      allow update: if isAdmin()
+        || isJoining()
+        || isLeaving()
+        || (isMember() && sameMembers()
+            && onlyKeys(['roomName', 'members', 'presence', 'cycleStart'])
+            && (!frozen() || onlyKeys(['presence'])));
+      // deleting a room is admin-only (the admin client also removes every sub-collection document)
+      allow delete: if isAdmin();
+
+      // ---- expenses: add in your own name only; only the owner (or admin) can change / remove ----
+      match /expenses/{id} {
+        allow read: if isAdmin() || memberOf(code);
+        allow create: if isAdmin() || (memberOf(code) && !frozen()
+          && request.resource.data.paidById == request.auth.uid
+          && request.resource.data.addedBy == request.auth.uid);
+        allow update: if isAdmin() || (memberOf(code) && !frozen()
+          && resource.data.addedBy == request.auth.uid
+          && request.resource.data.paidById == resource.data.paidById
+          && request.resource.data.addedBy == resource.data.addedBy);
+        allow delete: if isAdmin() || (memberOf(code) && !frozen()
+          && resource.data.addedBy == request.auth.uid);
+      }
+
+      // ---- settlements: receiver-only verification ----
+      //  create : only the PAYER, only as "pending_receiver_approval"
+      //  update : only the RECEIVER, only pending → settled / rejected
+      //  delete : receiver (undo), or the payer while it is not settled yet (withdraw / dismiss)
+      match /settlements/{id} {
+        allow read: if isAdmin() || memberOf(code);
+        allow create: if isAdmin() || (memberOf(code) && !frozen()
+          && request.resource.data.status == 'pending_receiver_approval'
+          && request.resource.data.fromId == request.auth.uid
+          && request.resource.data.toId != request.auth.uid);
+        allow update: if isAdmin() || (memberOf(code) && !frozen()
+          && resource.data.toId == request.auth.uid
+          && resource.data.status == 'pending_receiver_approval'
+          && request.resource.data.status in ['settled', 'rejected']
+          && request.resource.data.diff(resource.data).affectedKeys()
+               .hasOnly(['status', 'approvedBy', 'rejectedBy', 'settledAt', 'decidedAt']));
+        allow delete: if isAdmin() || (memberOf(code) && !frozen()
+          && (resource.data.toId == request.auth.uid
+              || (resource.data.fromId == request.auth.uid && resource.data.status != 'settled')));
+      }
+
+      // ---- archives: any member can archive the month; only admin can alter / remove ----
+      match /archives/{id} {
+        allow read: if isAdmin() || memberOf(code);
+        allow create: if isAdmin() || (memberOf(code) && !frozen());
+        allow update, delete: if isAdmin();
+      }
+    }
+
+    // ---------- admin-only collection-group reads (global stats / export) ----------
+    match /{path=**}/expenses/{id} {
+      allow read: if isAdmin();
+    }
+    match /{path=**}/settlements/{id} {
+      allow read: if isAdmin();
+    }
+    match /{path=**}/archives/{id} {
+      allow read: if isAdmin();
+    }
+  }
+}

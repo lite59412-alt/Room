@@ -1,0 +1,182 @@
+@import "tailwindcss";
+
+@custom-variant light (&:where(.light, .light *));
+
+/* ---------- Theme tokens (dark is default, .light overrides) ---------- */
+:root {
+  --c-bg: #060a14;
+  --c-surface: #0b1220;
+  --c-surface-2: #121b2d;
+  --c-border: #1b2639;
+  --c-ink: #f4f7fb;
+  --c-muted: #9aa6ba;
+  --c-green: #22c97a;
+  --c-green-soft: rgba(34, 201, 122, 0.14);
+  --c-blue: #3b9bff;
+  --c-blue-soft: rgba(59, 155, 255, 0.16);
+  --c-red: #ff4d5e;
+  --c-red-soft: rgba(255, 77, 94, 0.14);
+  --grad-green: linear-gradient(150deg, #0f4a37 0%, #0a2a25 55%, #08201f 100%);
+  --grad-blue: linear-gradient(150deg, #11285a 0%, #0c1b3e 60%, #0a1630 100%);
+  --border-green: #1c7a52;
+  --border-blue: #1f4a9c;
+  --shadow-card: 0 10px 30px -12px rgba(0, 0, 0, 0.6);
+  --nav-bg: rgba(10, 16, 29, 0.96);
+  --overlay: rgba(2, 5, 12, 0.7);
+  color-scheme: dark;
+}
+
+.light {
+  --c-bg: #eef2f8;
+  --c-surface: #ffffff;
+  --c-surface-2: #f1f5fb;
+  --c-border: #dde4ee;
+  --c-ink: #0f172a;
+  --c-muted: #64748b;
+  --c-green: #12a865;
+  --c-green-soft: rgba(18, 168, 101, 0.12);
+  --c-blue: #1d74e8;
+  --c-blue-soft: rgba(29, 116, 232, 0.12);
+  --c-red: #e11d48;
+  --c-red-soft: rgba(225, 29, 72, 0.1);
+  --grad-green: linear-gradient(150deg, #dff7ea 0%, #c9f0dc 60%, #bfeed6 100%);
+  --grad-blue: linear-gradient(150deg, #e3eeff 0%, #d3e4ff 60%, #c9deff 100%);
+  --border-green: #8fd8b5;
+  --border-blue: #9dc0f5;
+  --shadow-card: 0 10px 24px -14px rgba(15, 23, 42, 0.25);
+  --nav-bg: rgba(255, 255, 255, 0.97);
+  --overlay: rgba(15, 23, 42, 0.45);
+  color-scheme: light;
+}
+
+@theme inline {
+  --color-bg: var(--c-bg);
+  --color-surface: var(--c-surface);
+  --color-surface2: var(--c-surface-2);
+  --color-line: var(--c-border);
+  --color-ink: var(--c-ink);
+  --color-muted: var(--c-muted);
+  --color-brand: var(--c-green);
+  --color-brandsoft: var(--c-green-soft);
+  --color-sky: var(--c-blue);
+  --color-skysoft: var(--c-blue-soft);
+  --color-danger: var(--c-red);
+  --color-dangersoft: var(--c-red-soft);
+  --font-sans: "Inter", "SF Pro Display", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+
+html,
+body,
+#root {
+  min-height: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--c-bg);
+  color: var(--c-ink);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  -webkit-tap-highlight-color: transparent;
+  overscroll-behavior-y: none;
+}
+
+button {
+  font-family: inherit;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+input,
+textarea,
+select {
+  font-family: inherit;
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  scrollbar-width: none;
+}
+
+/* ---------- Animations ---------- */
+@keyframes sheet-up {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@keyframes toast-in {
+  from {
+    opacity: 0;
+    transform: translateY(-14px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+@keyframes pop {
+  0% {
+    transform: scale(0.9);
+  }
+  60% {
+    transform: scale(1.04);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+@keyframes draw {
+  from {
+    stroke-dashoffset: 400;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+@keyframes ping-soft {
+  0% {
+    transform: scale(1);
+    opacity: 0.7;
+  }
+  100% {
+    transform: scale(2.2);
+    opacity: 0;
+  }
+}
+
+.anim-sheet {
+  animation: sheet-up 0.32s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.anim-fade {
+  animation: fade-in 0.25s ease-out;
+}
+.anim-toast {
+  animation: toast-in 0.35s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.anim-pop {
+  animation: pop 0.3s ease-out;
+}
+.anim-draw {
+  stroke-dasharray: 400;
+  animation: draw 1.4s ease-out forwards;
+}
+.ping-soft {
+  animation: ping-soft 1.6s ease-out infinite;
+}
+
+.safe-bottom {
+  padding-bottom: max(env(safe-area-inset-bottom), 0px);
+}

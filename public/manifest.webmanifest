@@ -1,0 +1,15 @@
+{
+  "name": "RoomieKhata",
+  "short_name": "RoomieKhata",
+  "description": "Bachelor room expense manager — shared kharcha, split and UPI settlement",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#060a14",
+  "theme_color": "#060a14",
+  "icons": [
+    { "src": "/images/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "/images/icon.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ]
+}
