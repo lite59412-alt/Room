@@ -37,15 +37,13 @@ export interface FirebaseConfig {
 const CFG_KEY = 'rk.firebase';
 
 function envConfig(): FirebaseConfig | null {
-  const e = import.meta.env;
-  if (!e.VITE_FIREBASE_API_KEY || !e.VITE_FIREBASE_PROJECT_ID) return null;
   return {
-    apiKey: e.VITE_FIREBASE_API_KEY,
-    authDomain: e.VITE_FIREBASE_AUTH_DOMAIN,
-    projectId: e.VITE_FIREBASE_PROJECT_ID,
-    storageBucket: e.VITE_FIREBASE_STORAGE_BUCKET,
-    messagingSenderId: e.VITE_FIREBASE_MESSAGING_SENDER_ID,
-    appId: e.VITE_FIREBASE_APP_ID,
+    apiKey: "AIzaSyCXMm1tzeK_VfuyRhsefJtD8WHBJvUQSjU",
+    authDomain: "roomkhata-3e223.firebaseapp.com",
+    projectId: "roomkhata-3e223",
+    storageBucket: "roomkhata-3e223.firebasestorage.app",
+    messagingSenderId: "326426644235",
+    appId: "1:326426644235:web:11db6d05c84de75c58dc0e",
   };
 }
 
