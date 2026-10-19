@@ -50,10 +50,15 @@ function Gate({ theme, toggleTheme }: ThemeApi) {
 
   if (auth.phase === 'loading') return <Splash label="Checking your session…" />;
 
-  if (auth.phase === 'out' || !auth.user) {
+    if (auth.phase === 'out' || !auth.user) {
     return (
       <div key="login" className="anim-fade">
-        <LoginScreen busy={auth.busy} error={auth.error} onSignIn={auth.signIn} />
+        <LoginScreen
+          busy={auth.busy}
+          error={auth.error}
+          onSignIn={auth.signIn}
+          onSignUp={auth.signUp}
+        />
       </div>
     );
   }
