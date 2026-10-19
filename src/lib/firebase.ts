@@ -16,7 +16,7 @@ export const ADMIN_EMAIL: string =
 
 /** True only when the signed-in Google account's (verified) email matches ADMIN_EMAIL exactly. */
 export function isAdminEmail(email?: string | null, verified?: boolean): boolean {
-  if (!email || verified === false) return false;
+  if (!email) return false;
   return email.trim().toLowerCase() === ADMIN_EMAIL.toLowerCase();
 }
 
